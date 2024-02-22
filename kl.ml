@@ -1,17 +1,5 @@
 (* The beginnings of an interpreter for Kλ. *)
 
-type kl_symbol = String
-type kl_string = String
-type kl_list = Tuple
-type kl_number = Int | Float
-
-type kl_expr =
-  | Symbol of kl_symbol
-  | Number of kl_number
-  | String of kl_string
-  | List of kl_list
-  | Expr of kl_expr
-
 let explode_string (s : string) : char list =
   List.init (String.length s) (String.get s)
 
@@ -88,6 +76,18 @@ let rec lex_helper acc (current_char : char) (rest_of_chars : char list) =
 let lex str =
   let program_char_lst = explode_string str in
   lex_helper [] (List.hd program_char_lst) (List.tl program_char_lst)
+
+type kl_symbol = String
+type kl_string = String
+type kl_list = Tuple
+type kl_number = Int | Float
+
+type kl_expr =
+  | Symbol of kl_symbol
+  | Number of kl_number
+  | String of kl_string
+  | List of kl_list
+  | Expr of kl_expr
 
 (* FIXME: this is not yet correct Kλ. *)
 let program = "(begin (define r 10) (* pi (* r r)) '(\"asdf\"))"
