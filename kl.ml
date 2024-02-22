@@ -91,4 +91,7 @@ let lex str =
 
 (* FIXME: this is not yet correct Kλ. *)
 let program = "(begin (define r 10) (* pi (* r r)) '(\"asdf\"))"
-let main () = print_string "hello world"
+let main () =
+  read_line () |> lex (* |> parse |> eval |> eval_print *)
+
+let _ = main ()
