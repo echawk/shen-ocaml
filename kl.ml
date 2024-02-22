@@ -91,7 +91,5 @@ type kl_expr = Value of kl_value | Expr of kl_expr
 
 (* FIXME: this is not yet correct Kλ. *)
 let program = "(begin (define r 10) (* pi (* r r)) '(\"asdf\"))"
-let main () =
-  read_line () |> lex (* |> parse |> eval |> eval_print *)
-
+let main () = read_line () |> lex (* |> parse |> eval |> eval_print *)
 let _ = main ()
