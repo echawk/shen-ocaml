@@ -77,17 +77,17 @@ let lex str =
   let program_char_lst = explode_string str in
   lex_helper [] (List.hd program_char_lst) (List.tl program_char_lst)
 
-type kl_symbol = String
-type kl_string = String
-type kl_list = Tuple
 type kl_number = Int | Float
 
-type kl_expr =
-  | Symbol of kl_symbol
+type kl_value =
+  | Symbol of string
   | Number of kl_number
-  | String of kl_string
-  | List of kl_list
-  | Expr of kl_expr
+  | String of string
+  | List of kl_value list
+
+(* FIXME: I don't think this definition is *technically* correct yet. *)
+type kl_expr = Value of kl_value | Expr of kl_expr
+
 
 (* FIXME: this is not yet correct Kλ. *)
 let program = "(begin (define r 10) (* pi (* r r)) '(\"asdf\"))"
