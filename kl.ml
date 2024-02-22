@@ -41,7 +41,7 @@ let rec drop (n : int) (l : 'a list) : 'a list =
 let char_is_digit c = match c with '0' .. '9' -> true | _ -> false
 
 let char_is_symbol_char c =
-  match c with '(' | ')' | '\t' | ' ' | '\n' -> false | _ -> true
+  match c with '(' | ')' | '\t' | ' ' | '"' | '\n' -> false | _ -> true
 
 let next_lexeme current_char rest_of_chars : kl_lex =
   match current_char with
