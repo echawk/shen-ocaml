@@ -14,7 +14,7 @@ type kl_lex =
   | Symbol of char list
   | Minus
   | Dot
-  | WhiteSpace
+  | WhiteSpace of char list
   | ERROR of char list
 
 let take_while (p : 'a -> bool) (l : 'a list) : 'a list =
@@ -43,7 +43,7 @@ let next_lexeme current_char rest_of_chars : kl_lex =
   | ')' -> RParen
   | '.' -> Dot
   | '-' -> Minus
-  | ' ' | '\t' | '\n' -> WhiteSpace
+  | ' ' | '\t' | '\n' -> WhiteSpace (current_char :: [])
   | '0' .. '9' ->
       let acc_num = current_char :: take_while char_is_digit rest_of_chars in
       Number acc_num
