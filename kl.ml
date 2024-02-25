@@ -68,6 +68,7 @@ let rec lex_helper acc (current_char : char) (rest_of_chars : char list) =
   (* FIXME: do proper error checking here... *)
   let next_rest_of_chars =
     match next_lexeme with
+    (* We add two because of the quotes for the string. *)
     | String l -> drop (chars_to_drop + 2) rest_of_chars
     | _ -> drop chars_to_drop rest_of_chars
   in
