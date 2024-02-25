@@ -1,6 +1,6 @@
 (* The beginnings of an interpreter for Kλ. *)
 
-let explode_string (s : string) : char list =
+let char_list_of_string (s : string) : char list =
   List.init (String.length s) (String.get s)
 
 let string_of_char_list (char_list : char list) : string =
@@ -80,7 +80,7 @@ let rec lex_helper acc (current_char : char) (rest_of_chars : char list) =
       (List.tl next_rest_of_chars)
 
 let lex str =
-  let program_char_lst = explode_string str in
+  let program_char_lst = char_list_of_string str in
   lex_helper [] (List.hd program_char_lst) (List.tl program_char_lst)
 
 type kl_number = Int | Float
