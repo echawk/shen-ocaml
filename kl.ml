@@ -26,7 +26,7 @@ let take_while (p : 'a -> bool) (l : 'a list) : 'a list =
   aux [] p l |> List.rev
 
 let rec drop_while (p : 'a -> bool) (l : 'a list) : 'a list =
-  match l with [] -> [] | lh :: lt -> if p lh then drop_while p lt else lt
+  match l with [] -> [] | lh :: lt -> if p lh then drop_while p lt else l
 
 let rec drop (n : int) (l : 'a list) : 'a list =
   if n > List.length l then []
