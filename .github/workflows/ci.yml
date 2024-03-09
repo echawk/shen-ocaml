@@ -22,3 +22,4 @@ jobs:
           ocaml-compiler: ${{matrix.ocaml-compiler}}
 
       - run: opam exec -- ocamlc kl.ml -o kl
+      - run: opam exec -- ocamlopt -cclib -static-pie kl.ml -o kl.static.native
