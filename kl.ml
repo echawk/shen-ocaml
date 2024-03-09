@@ -87,7 +87,9 @@ let lex str =
   let program_char_lst = char_list_of_string str in
   lex_helper [] (List.hd program_char_lst) (List.tl program_char_lst)
 
-type kl_number = Int | Float
+(* Parser code below: *)
+
+type kl_number = Int of int | Float of float
 
 type kl_value =
   | Symbol of string
@@ -98,6 +100,14 @@ type kl_value =
 (* FIXME: I don't think this definition is *technically* correct yet. *)
 type kl_expr = Value of kl_value | Expr of kl_expr
 
+let parse (lst : kl_lex list) : kl_value =
+  match lst with
+  | Number int_part :: Dot :: Number dec_part :: rst ->
+      Number
+        (Float
+           (fold_list_of_lists [ int_part; [ '.' ]; dec_part ]
+           |> string_of_char_list |> float_of_string))
+  | _ -> Number (Float 10.20)
 
 (* FIXME: this is not yet correct Kλ. *)
 let program = "(begin (define r 10) (* pi (* r r)) '(\"asdf\"))"
