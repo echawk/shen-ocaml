@@ -6,16 +6,8 @@ let char_list_of_string (s : string) : char list =
 let string_of_char_list (char_list : char list) : string =
   char_list |> List.to_seq |> String.of_seq
 
-type kl_lex =
-  | LParen
-  | RParen
-  | Number of char list
-  | String of char list
-  | Symbol of char list
-  | Minus
-  | Dot
-  | WhiteSpace of char list
-  | ERROR of char list
+let fold_list_of_lists lst_of_lsts =
+  List.fold_left (fun lst acc -> List.append lst acc) [] lst_of_lsts
 
 let take_while (p : 'a -> bool) (l : 'a list) : 'a list =
   let rec aux acc p l =
@@ -31,6 +23,17 @@ let rec drop_while (p : 'a -> bool) (l : 'a list) : 'a list =
 let rec drop (n : int) (l : 'a list) : 'a list =
   if n > List.length l then []
   else match n with 0 -> l | _ -> drop (n - 1) (List.tl l)
+
+type kl_lex =
+  | LParen
+  | RParen
+  | Number of char list
+  | String of char list
+  | Symbol of char list
+  | Minus
+  | Dot
+  | WhiteSpace of char list
+  | ERROR of char list
 
 let char_is_digit c = match c with '0' .. '9' -> true | _ -> false
 
