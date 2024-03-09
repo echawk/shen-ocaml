@@ -6,7 +6,7 @@ let char_list_of_string (s : string) : char list =
 let string_of_char_list (char_list : char list) : string =
   char_list |> List.to_seq |> String.of_seq
 
-let fold_list_of_lists lst_of_lsts =
+let join_list_of_lists lst_of_lsts =
   List.fold_left (fun lst acc -> List.append lst acc) [] lst_of_lsts
 
 let take_while (p : 'a -> bool) (l : 'a list) : 'a list =
@@ -105,7 +105,7 @@ let parse (lst : kl_lex list) : kl_value =
   | Number int_part :: Dot :: Number dec_part :: rst ->
       Number
         (Float
-           (fold_list_of_lists [ int_part; [ '.' ]; dec_part ]
+           (join_list_of_lists [ int_part; [ '.' ]; dec_part ]
            |> string_of_char_list |> float_of_string))
   | _ -> Number (Float 10.20)
 
