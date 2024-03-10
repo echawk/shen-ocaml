@@ -145,8 +145,7 @@ let parse_string (lst : kl_lex list) : kl_value =
 
 let parse (lst : kl_lex list) : kl_value =
   match lst with
-  | Number _ :: rst -> parse_number lst
-  | Minus :: rst -> parse_number lst
+  | Number _ :: rst | Minus :: rst -> parse_number lst
   | String _ :: rst -> parse_string lst
   | Symbol _ :: rst -> parse_symbol lst
   | _ -> Error
