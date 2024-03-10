@@ -138,8 +138,8 @@ let parse_atom (lst : kl_lex list) : kl_value * kl_lex list =
 
 let rec parse_helper (acc : kl_value list) (lst : kl_lex list) : kl_value list =
   let parse_result, rst =
-    match List.hd lst with
-    | String _ | Symbol _ | Number _ | Minus -> parse_atom lst
+    match lst with
+    | String _ :: _ | Symbol _ :: _ | Number _ :: _ -> parse_atom lst
     | _ -> (Error (List.hd lst), List.tl lst)
   in
   match rst with
