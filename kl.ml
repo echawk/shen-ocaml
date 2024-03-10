@@ -146,12 +146,17 @@ let parse_string (lst : kl_lex list) : kl_value * kl_lex list =
   | String char_lst :: rst -> (String (char_lst |> string_of_char_list), rst)
   | _ -> (Error, lst)
 
+let parse_atom (lst : kl_lex list) : kl_value * kl_lex list =
+  match List.hd lst with
+  | String _ -> parse_string lst
+  | Symbol _ -> parse_symbol lst
+  | Minus | Number _ -> parse_number lst
+  | _ -> (Error, lst)
+
 let rec parse_helper (acc : kl_value list) (lst : kl_lex list) : kl_value list =
   let parse_result, rst =
-    match lst with
-    | Number _ :: rst | Minus :: rst -> parse_number lst
-    | String _ :: rst -> parse_string lst
-    | Symbol _ :: rst -> parse_symbol lst
+    match List.hd lst with
+    | String _ | Symbol _ | Number _ | Minus -> parse_atom lst
     | _ -> (Error, lst)
   in
   match rst with
