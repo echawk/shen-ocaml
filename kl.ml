@@ -95,7 +95,7 @@ let lex str =
 type kl_number = Int of int | Float of float
 
 type kl_value =
-  | Error
+  | Error of kl_lex
   | Symbol of string
   | Number of kl_number
   | String of string
@@ -118,7 +118,7 @@ let parse_float (lst : kl_lex list) : kl_value * kl_lex list =
              (join_list_of_lists [ [ '-' ]; int_part; [ '.' ]; dec_part ]
              |> string_of_char_list |> float_of_string)),
         rst )
-  | _ -> (Error, lst)
+  | _ -> (Error (List.hd lst), List.tl lst)
 
 let parse_int (lst : kl_lex list) : kl_value * kl_lex list =
   match lst with
@@ -130,34 +130,34 @@ let parse_int (lst : kl_lex list) : kl_value * kl_lex list =
              (join_list_of_lists [ [ '-' ]; int_part ]
              |> string_of_char_list |> int_of_string)),
         rst )
-  | _ -> (Error, lst)
+  | _ -> (Error (List.hd lst), List.tl lst)
 
 let parse_number (lst : kl_lex list) : kl_value * kl_lex list =
   let parsed_float = parse_float lst in
-  match parsed_float with Error, _ -> parse_int lst | _ -> parsed_float
+  match parsed_float with Error _, _ -> parse_int lst | _ -> parsed_float
 
 let parse_symbol (lst : kl_lex list) : kl_value * kl_lex list =
   match lst with
   | Symbol char_lst :: rst -> (Symbol (char_lst |> string_of_char_list), rst)
-  | _ -> (Error, lst)
+  | _ -> (Error (List.hd lst), List.tl lst)
 
 let parse_string (lst : kl_lex list) : kl_value * kl_lex list =
   match lst with
   | String char_lst :: rst -> (String (char_lst |> string_of_char_list), rst)
-  | _ -> (Error, lst)
+  | _ -> (Error (List.hd lst), List.tl lst)
 
 let parse_atom (lst : kl_lex list) : kl_value * kl_lex list =
   match List.hd lst with
   | String _ -> parse_string lst
   | Symbol _ -> parse_symbol lst
   | Minus | Number _ -> parse_number lst
-  | _ -> (Error, lst)
+  | _ -> (Error (List.hd lst), List.tl lst)
 
 let rec parse_helper (acc : kl_value list) (lst : kl_lex list) : kl_value list =
   let parse_result, rst =
     match List.hd lst with
     | String _ | Symbol _ | Number _ | Minus -> parse_atom lst
-    | _ -> (Error, lst)
+    | _ -> (Error (List.hd lst), List.tl lst)
   in
   match rst with
   | [] -> parse_result :: acc
