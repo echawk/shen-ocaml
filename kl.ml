@@ -41,7 +41,7 @@ let char_is_digit c = match c with '0' .. '9' -> true | _ -> false
 let char_is_symbol_char c =
   match c with '(' | ')' | '\t' | ' ' | '"' | '\n' -> false | _ -> true
 
-let lex_number hd tl : kl_lex =
+let lex_number_helper hd tl : kl_lex =
   let acc_num = hd :: take_while char_is_digit tl in
   let potential_tl = drop (List.length acc_num - 1) tl in
   match potential_tl with
@@ -49,6 +49,15 @@ let lex_number hd tl : kl_lex =
       let acc_num_two = take_while char_is_digit (List.tl potential_tl) in
       Number (join_list_of_lists [ acc_num; [ '.' ]; acc_num_two ])
   | _ -> Number acc_num
+
+let lex_number hd tl : kl_lex =
+  match hd with
+  | '0' .. '9' -> lex_number_helper hd tl
+  | '-' -> (
+      match tl with
+      | '0' .. '9' :: _ -> lex_number_helper hd tl
+      | _ -> Symbol [ hd ])
+  | _ -> ERROR [ hd ]
 
 let next_lexeme current_char rest_of_chars : kl_lex =
   match current_char with
