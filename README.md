@@ -8,3 +8,7 @@ written in [OCaml](https://ocaml.org/).
 ```
 ocamlc kl.ml -o kl
 ```
+
+## Further Reading
+
+* https://github.com/Shen-Language/wiki/wiki
