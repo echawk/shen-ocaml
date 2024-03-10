@@ -54,6 +54,7 @@ let next_lexeme current_char rest_of_chars : kl_lex =
   match current_char with
   | '(' -> LParen
   | ')' -> RParen
+  | ' ' | '\t' | '\n' -> WhiteSpace
   | '-' | '0' .. '9' -> lex_number current_char rest_of_chars
   | '"' ->
       let acc_str = take_while (fun c -> not (c = '"')) rest_of_chars in
