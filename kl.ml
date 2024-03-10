@@ -122,9 +122,9 @@ let parse_number (lst : kl_lex list) : kl_value * kl_lex list =
   match lst with
   | Number lst :: rst ->
       ( Number
-          (if List.mem '.' lst then
-             Float (lst |> string_of_char_list |> float_of_string)
-           else Int (lst |> string_of_char_list |> int_of_string)),
+          (let lst_str = string_of_char_list lst in
+           if List.mem '.' lst then Float (float_of_string lst_str)
+           else Int (int_of_string lst_str)),
         rst )
   | _ -> (Error (List.hd lst), List.tl lst)
 
