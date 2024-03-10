@@ -111,13 +111,27 @@ let parse_float (lst : kl_lex list) : kl_value =
         (Float
            (join_list_of_lists [ int_part; [ '.' ]; dec_part ]
            |> string_of_char_list |> float_of_string))
+  | Minus :: Number int_part :: Dot :: Number dec_part :: rst ->
+      Number
+        (Float
+           (join_list_of_lists [ [ '-' ]; int_part; [ '.' ]; dec_part ]
+           |> string_of_char_list |> float_of_string))
   | _ -> Error
 
 let parse_int (lst : kl_lex list) : kl_value =
   match lst with
   | Number int_part :: rst ->
       Number (Int (int_part |> string_of_char_list |> int_of_string))
+  | Minus :: Number int_part :: rst ->
+      Number
+        (Int
+           (join_list_of_lists [ [ '-' ]; int_part ]
+           |> string_of_char_list |> int_of_string))
   | _ -> Error
+
+let parse_number (lst : kl_lex list) : kl_value =
+  let parsed_float = parse_float lst in
+  match parsed_float with Error -> parse_int lst | _ -> parsed_float
 
 let parse_symbol (lst : kl_lex list) : kl_value =
   match lst with
@@ -131,8 +145,8 @@ let parse_string (lst : kl_lex list) : kl_value =
 
 let parse (lst : kl_lex list) : kl_value =
   match lst with
-  | Number _ :: Dot :: Number _ :: rst -> parse_float lst
-  | Number _ :: rst -> parse_int lst
+  | Number _ :: rst -> parse_number lst
+  | Minus :: rst -> parse_number lst
   | String _ :: rst -> parse_string lst
   | Symbol _ :: rst -> parse_symbol lst
   | _ -> Error
