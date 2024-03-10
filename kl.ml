@@ -104,51 +104,61 @@ type kl_value =
 (* FIXME: I don't think this definition is *technically* correct yet. *)
 type kl_expr = Value of kl_value | Expr of kl_expr
 
-let parse_float (lst : kl_lex list) : kl_value =
+let parse_float (lst : kl_lex list) : kl_value * kl_lex list =
   match lst with
   | Number int_part :: Dot :: Number dec_part :: rst ->
-      Number
-        (Float
-           (join_list_of_lists [ int_part; [ '.' ]; dec_part ]
-           |> string_of_char_list |> float_of_string))
+      ( Number
+          (Float
+             (join_list_of_lists [ int_part; [ '.' ]; dec_part ]
+             |> string_of_char_list |> float_of_string)),
+        rst )
   | Minus :: Number int_part :: Dot :: Number dec_part :: rst ->
-      Number
-        (Float
-           (join_list_of_lists [ [ '-' ]; int_part; [ '.' ]; dec_part ]
-           |> string_of_char_list |> float_of_string))
-  | _ -> Error
+      ( Number
+          (Float
+             (join_list_of_lists [ [ '-' ]; int_part; [ '.' ]; dec_part ]
+             |> string_of_char_list |> float_of_string)),
+        rst )
+  | _ -> (Error, lst)
 
-let parse_int (lst : kl_lex list) : kl_value =
+let parse_int (lst : kl_lex list) : kl_value * kl_lex list =
   match lst with
   | Number int_part :: rst ->
-      Number (Int (int_part |> string_of_char_list |> int_of_string))
+      (Number (Int (int_part |> string_of_char_list |> int_of_string)), rst)
   | Minus :: Number int_part :: rst ->
-      Number
-        (Int
-           (join_list_of_lists [ [ '-' ]; int_part ]
-           |> string_of_char_list |> int_of_string))
-  | _ -> Error
+      ( Number
+          (Int
+             (join_list_of_lists [ [ '-' ]; int_part ]
+             |> string_of_char_list |> int_of_string)),
+        rst )
+  | _ -> (Error, lst)
 
-let parse_number (lst : kl_lex list) : kl_value =
+let parse_number (lst : kl_lex list) : kl_value * kl_lex list =
   let parsed_float = parse_float lst in
-  match parsed_float with Error -> parse_int lst | _ -> parsed_float
+  match parsed_float with Error, _ -> parse_int lst | _ -> parsed_float
 
-let parse_symbol (lst : kl_lex list) : kl_value =
+let parse_symbol (lst : kl_lex list) : kl_value * kl_lex list =
   match lst with
-  | Symbol char_lst :: rst -> Symbol (char_lst |> string_of_char_list)
-  | _ -> Error
+  | Symbol char_lst :: rst -> (Symbol (char_lst |> string_of_char_list), rst)
+  | _ -> (Error, lst)
 
-let parse_string (lst : kl_lex list) : kl_value =
+let parse_string (lst : kl_lex list) : kl_value * kl_lex list =
   match lst with
-  | String char_lst :: rst -> String (char_lst |> string_of_char_list)
-  | _ -> Error
+  | String char_lst :: rst -> (String (char_lst |> string_of_char_list), rst)
+  | _ -> (Error, lst)
 
-let parse (lst : kl_lex list) : kl_value =
-  match lst with
-  | Number _ :: rst | Minus :: rst -> parse_number lst
-  | String _ :: rst -> parse_string lst
-  | Symbol _ :: rst -> parse_symbol lst
-  | _ -> Error
+let rec parse_helper (acc : kl_value list) (lst : kl_lex list) : kl_value list =
+  let parse_result, rst =
+    match lst with
+    | Number _ :: rst | Minus :: rst -> parse_number lst
+    | String _ :: rst -> parse_string lst
+    | Symbol _ :: rst -> parse_symbol lst
+    | _ -> (Error, lst)
+  in
+  match rst with
+  | [] -> parse_result :: acc
+  | _ -> parse_helper (parse_result :: acc) rst
+
+let parse (lst : kl_lex list) = parse_helper [] lst |> List.rev
 
 
 (* FIXME: this is not yet correct Kλ. *)
