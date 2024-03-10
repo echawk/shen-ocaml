@@ -24,6 +24,9 @@ let rec drop (n : int) (l : 'a list) : 'a list =
   if n > List.length l then []
   else match n with 0 -> l | _ -> drop (n - 1) (List.tl l)
 
+let read_string_from_file filepath =
+  In_channel.with_open_text filepath In_channel.input_all
+
 type kl_lex =
   | LParen
   | RParen
@@ -137,5 +140,10 @@ let parse (lst : kl_lex list) : kl_value =
 
 (* FIXME: this is not yet correct Kλ. *)
 let program = "(begin (define r 10) (* pi (* r r)) '(\"asdf\"))"
-let main () = read_line () |> lex (* |> parse |> eval |> eval_print *)
-let _ = main ()
+
+let main () =
+  if Array.length Sys.argv > 1 then read_string_from_file Sys.argv.(1) |> lex
+  else read_line () |> lex
+
+(* |> parse |> eval |> eval_print *)
+(* let _ = main () *)
