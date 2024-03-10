@@ -109,7 +109,7 @@ let lex str =
 type kl_number = Int of int | Float of float
 
 type kl_value =
-  | Error of kl_lex
+  | ERROR of kl_lex
   | Symbol of string
   | Number of kl_number
   | String of string
@@ -126,34 +126,33 @@ let parse_number (lst : kl_lex list) : kl_value * kl_lex list =
            if List.mem '.' lst then Float (float_of_string lst_str)
            else Int (int_of_string lst_str)),
         rst )
-  | _ -> (Error (List.hd lst), List.tl lst)
+  | _ -> (ERROR (List.hd lst), List.tl lst)
 
 let parse_symbol (lst : kl_lex list) : kl_value * kl_lex list =
   match lst with
   | Symbol char_lst :: rst -> (Symbol (char_lst |> string_of_char_list), rst)
-  | _ -> (Error (List.hd lst), List.tl lst)
+  | _ -> (ERROR (List.hd lst), List.tl lst)
 
 let parse_string (lst : kl_lex list) : kl_value * kl_lex list =
   match lst with
   | String char_lst :: rst -> (String (char_lst |> string_of_char_list), rst)
-  | _ -> (Error (List.hd lst), List.tl lst)
+  | _ -> (ERROR (List.hd lst), List.tl lst)
 
 let parse_atom (lst : kl_lex list) : kl_value * kl_lex list =
   match List.hd lst with
   | String _ -> parse_string lst
   | Symbol _ -> parse_symbol lst
   | Number _ -> parse_number lst
-  | _ -> (Error (List.hd lst), List.tl lst)
+  | _ -> (ERROR (List.hd lst), List.tl lst)
 
 let rec parse_helper (acc : kl_value list) (lst : kl_lex list) : kl_value list =
   let parse_result, rst =
     match lst with
     | String _ :: _ | Symbol _ :: _ | Number _ :: _ -> parse_atom lst
-    | _ -> (Error (List.hd lst), List.tl lst)
+    | _ -> (ERROR (List.hd lst), List.tl lst)
   in
-  match rst with
-  | [] -> parse_result :: acc
-  | _ -> parse_helper (parse_result :: acc) rst
+  let next_acc = parse_result :: acc in
+  match rst with [] -> next_acc | _ -> parse_helper next_acc rst
 
 let parse (lst : kl_lex list) = parse_helper [] lst |> List.rev
 
