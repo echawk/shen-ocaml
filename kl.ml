@@ -33,9 +33,7 @@ type kl_lex =
   | Number of char list
   | String of char list
   | Symbol of char list
-  | Minus
-  | Dot
-  | WhiteSpace of char list
+  | WhiteSpace
   | ERROR of char list
 
 let char_is_digit c = match c with '0' .. '9' -> true | _ -> false
@@ -43,16 +41,20 @@ let char_is_digit c = match c with '0' .. '9' -> true | _ -> false
 let char_is_symbol_char c =
   match c with '(' | ')' | '\t' | ' ' | '"' | '\n' -> false | _ -> true
 
+let lex_number hd tl : kl_lex =
+  let acc_num = hd :: take_while char_is_digit tl in
+  let potential_tl = drop (List.length acc_num - 1) tl in
+  match potential_tl with
+  | '.' :: '0' .. '9' :: _ ->
+      let acc_num_two = take_while char_is_digit (List.tl potential_tl) in
+      Number (join_list_of_lists [ acc_num; [ '.' ]; acc_num_two ])
+  | _ -> Number acc_num
+
 let next_lexeme current_char rest_of_chars : kl_lex =
   match current_char with
   | '(' -> LParen
   | ')' -> RParen
-  | '.' -> Dot
-  | '-' -> Minus
-  | ' ' | '\t' | '\n' -> WhiteSpace (current_char :: [])
-  | '0' .. '9' ->
-      let acc_num = current_char :: take_while char_is_digit rest_of_chars in
-      Number acc_num
+  | '-' | '0' .. '9' -> lex_number current_char rest_of_chars
   | '"' ->
       let acc_str = take_while (fun c -> not (c = '"')) rest_of_chars in
       String acc_str
@@ -89,6 +91,8 @@ let rec lex_helper acc (current_char : char) (rest_of_chars : char list) =
 let lex str =
   let program_char_lst = char_list_of_string str in
   lex_helper [] (List.hd program_char_lst) (List.tl program_char_lst)
+  |> List.filter (fun lexeme ->
+         match lexeme with WhiteSpace -> false | _ -> true)
 
 (* Parser code below: *)
 
@@ -104,37 +108,15 @@ type kl_value =
 (* FIXME: I don't think this definition is *technically* correct yet. *)
 type kl_expr = Value of kl_value | Expr of kl_expr
 
-let parse_float (lst : kl_lex list) : kl_value * kl_lex list =
-  match lst with
-  | Number int_part :: Dot :: Number dec_part :: rst ->
-      ( Number
-          (Float
-             (join_list_of_lists [ int_part; [ '.' ]; dec_part ]
-             |> string_of_char_list |> float_of_string)),
-        rst )
-  | Minus :: Number int_part :: Dot :: Number dec_part :: rst ->
-      ( Number
-          (Float
-             (join_list_of_lists [ [ '-' ]; int_part; [ '.' ]; dec_part ]
-             |> string_of_char_list |> float_of_string)),
-        rst )
-  | _ -> (Error (List.hd lst), List.tl lst)
-
-let parse_int (lst : kl_lex list) : kl_value * kl_lex list =
-  match lst with
-  | Number int_part :: rst ->
-      (Number (Int (int_part |> string_of_char_list |> int_of_string)), rst)
-  | Minus :: Number int_part :: rst ->
-      ( Number
-          (Int
-             (join_list_of_lists [ [ '-' ]; int_part ]
-             |> string_of_char_list |> int_of_string)),
-        rst )
-  | _ -> (Error (List.hd lst), List.tl lst)
-
 let parse_number (lst : kl_lex list) : kl_value * kl_lex list =
-  let parsed_float = parse_float lst in
-  match parsed_float with Error _, _ -> parse_int lst | _ -> parsed_float
+  match lst with
+  | Number lst :: rst ->
+      ( Number
+          (if List.mem '.' lst then
+             Float (lst |> string_of_char_list |> float_of_string)
+           else Int (lst |> string_of_char_list |> int_of_string)),
+        rst )
+  | _ -> (Error (List.hd lst), List.tl lst)
 
 let parse_symbol (lst : kl_lex list) : kl_value * kl_lex list =
   match lst with
@@ -150,7 +132,7 @@ let parse_atom (lst : kl_lex list) : kl_value * kl_lex list =
   match List.hd lst with
   | String _ -> parse_string lst
   | Symbol _ -> parse_symbol lst
-  | Minus | Number _ -> parse_number lst
+  | Number _ -> parse_number lst
   | _ -> (Error (List.hd lst), List.tl lst)
 
 let rec parse_helper (acc : kl_value list) (lst : kl_lex list) : kl_value list =
