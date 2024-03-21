@@ -1,5 +1,53 @@
 (* The beginnings of an interpreter for Kλ. *)
 
+module SizedList = struct
+  type 'a sized_list = { lst : 'a list; size : int }
+
+  let init (l : 'a list) : 'a sized_list = { lst = l; size = List.length l }
+  let length (l : 'a sized_list) : int = l.size
+
+  let cons (e : 'a) (l : 'a sized_list) : 'a sized_list =
+    { lst = e :: l.lst; size = l.size + 1 }
+
+  let hd (l : 'a sized_list) : 'a = List.hd l.lst
+
+  let tl (l : 'a sized_list) : 'a sized_list =
+    { lst = List.tl l.lst; size = l.size - 1 }
+
+  let rev (l : 'a sized_list) : 'a sized_list =
+    { lst = List.rev l.lst; size = l.size }
+
+  let rec drop (n : int) (l : 'a sized_list) : 'a sized_list =
+    let rec aux n l s =
+      if n > s then { lst = []; size = 0 }
+      else
+        match n with
+        | 0 -> { lst = l; size = s }
+        | _ -> aux (n - 1) (List.tl l) (s - 1)
+    in
+    aux n l.lst l.size
+
+  let drop_while (p : 'a -> bool) (l : 'a sized_list) : 'a sized_list =
+    let rec aux p l s =
+      match l with
+      | [] -> { lst = []; size = 0 }
+      | lh :: lt -> if p lh then aux p lt (s - 1) else { lst = l; size = s }
+    in
+    aux p l.lst l.size
+
+  let take_while (p : 'a -> bool) (l : 'a sized_list) : 'a sized_list =
+    let rec aux acc p l s =
+      match l with
+      | [] -> { lst = acc; size = s }
+      | lh :: lt ->
+          if p lh then aux (lh :: acc) p lt (s + 1) else { lst = acc; size = s }
+    in
+    aux [] p l.lst 0 |> rev
+
+  let to_list (l : 'a sized_list) : 'a list = l.lst
+end
+
+(* Defining some missing utility functions. *)
 let char_list_of_string (s : string) : char list =
   List.init (String.length s) (String.get s)
 
@@ -9,23 +57,19 @@ let string_of_char_list (char_list : char list) : string =
 let join_list_of_lists lst_of_lsts =
   List.fold_left (fun lst acc -> List.append lst acc) [] lst_of_lsts
 
-let take_while (p : 'a -> bool) (l : 'a list) : 'a list =
-  let rec aux acc p l =
-    match l with
-    | [] -> acc
-    | lh :: lt -> if p lh then aux (lh :: acc) p lt else acc
-  in
-  aux [] p l |> List.rev
-
-let rec drop_while (p : 'a -> bool) (l : 'a list) : 'a list =
-  match l with [] -> [] | lh :: lt -> if p lh then drop_while p lt else l
-
-let rec drop (n : int) (l : 'a list) : 'a list =
-  if n > List.length l then []
-  else match n with 0 -> l | _ -> drop (n - 1) (List.tl l)
-
 let read_string_from_file filepath =
   In_channel.with_open_text filepath In_channel.input_all
+
+(*
+  Simple little timing function (thanks stackoverflow!)
+  Source: https://web.archive.org/web/20140720233328/https://stackoverflow.com/questions/9061421/running-time-in-ocaml
+ *)
+
+let time f x =
+  let t = Sys.time () in
+  let fx = f x in
+  Printf.printf "Execution time: %fs\n" (Sys.time () -. t);
+  fx
 
 type kl_lex =
   | LParen
@@ -41,41 +85,54 @@ let char_is_digit c = match c with '0' .. '9' -> true | _ -> false
 let char_is_symbol_char c =
   match c with '(' | ')' | '\t' | ' ' | '"' | '\n' -> false | _ -> true
 
-let lex_number_helper hd tl : kl_lex =
-  let acc_num = hd :: take_while char_is_digit tl in
-  let potential_tl = drop (List.length acc_num - 1) tl in
-  match potential_tl with
+let lex_number_helper (hd : char) (tl : char SizedList.sized_list) : kl_lex =
+  let acc_num =
+    SizedList.cons hd (SizedList.take_while char_is_digit tl)
+    |> SizedList.to_list
+  in
+  let potential_tl = SizedList.drop (List.length acc_num - 1) tl in
+  match potential_tl.lst with
   | '.' :: '0' .. '9' :: _ ->
-      let acc_num_two = take_while char_is_digit (List.tl potential_tl) in
+      let acc_num_two =
+        SizedList.take_while char_is_digit (SizedList.tl potential_tl)
+        |> SizedList.to_list
+      in
       Number (join_list_of_lists [ acc_num; [ '.' ]; acc_num_two ])
   | _ -> Number acc_num
 
-let lex_number hd tl : kl_lex =
+let lex_number (hd : char) (tl : 'a SizedList.sized_list) : kl_lex =
   match hd with
   | '0' .. '9' -> lex_number_helper hd tl
   | '-' -> (
-      match tl with
+      match tl.lst with
       | '0' .. '9' :: _ -> lex_number_helper hd tl
       | _ -> Symbol [ hd ])
   | _ -> ERROR [ hd ]
 
-let next_lexeme current_char rest_of_chars : kl_lex =
+let next_lexeme current_char (rest_of_chars : 'a SizedList.sized_list) : kl_lex
+    =
   match current_char with
   | '(' -> LParen
   | ')' -> RParen
   | ' ' | '\t' | '\n' -> WhiteSpace
   | '-' | '0' .. '9' -> lex_number current_char rest_of_chars
   | '"' ->
-      let acc_str = take_while (fun c -> not (c = '"')) rest_of_chars in
+      let acc_str =
+        SizedList.take_while (fun c -> not (c = '"')) rest_of_chars
+        |> SizedList.to_list
+      in
       String acc_str
   | _ ->
       (* TODO: add some error checking here... *)
       let acc_sym =
-        current_char :: take_while char_is_symbol_char rest_of_chars
+        current_char
+        :: (SizedList.take_while char_is_symbol_char rest_of_chars
+           |> SizedList.to_list)
       in
       Symbol acc_sym
 
-let rec lex_helper acc (current_char : char) (rest_of_chars : char list) =
+let rec lex_helper acc (current_char : char)
+    (rest_of_chars : char SizedList.sized_list) =
   let next_lexeme = next_lexeme current_char rest_of_chars in
   let chars_to_drop =
     match next_lexeme with
@@ -87,20 +144,20 @@ let rec lex_helper acc (current_char : char) (rest_of_chars : char list) =
   let next_rest_of_chars =
     match next_lexeme with
     (* We add two because of the quotes for the string. *)
-    | String l -> drop (chars_to_drop + 2) rest_of_chars
-    | _ -> drop chars_to_drop rest_of_chars
+    | String l -> SizedList.drop (chars_to_drop + 2) rest_of_chars
+    | _ -> SizedList.drop chars_to_drop rest_of_chars
   in
 
   let next_acc = next_lexeme :: acc in
-  if next_rest_of_chars = [] then next_acc |> List.rev
+  if next_rest_of_chars.lst = [] then next_acc |> List.rev
   else
     lex_helper next_acc
-      (List.hd next_rest_of_chars)
-      (List.tl next_rest_of_chars)
+      (SizedList.hd next_rest_of_chars)
+      (SizedList.tl next_rest_of_chars)
 
 let lex str =
-  let program_char_lst = char_list_of_string str in
-  lex_helper [] (List.hd program_char_lst) (List.tl program_char_lst)
+  let program_char_lst = char_list_of_string str |> SizedList.init in
+  lex_helper [] (SizedList.hd program_char_lst) (SizedList.tl program_char_lst)
   |> List.filter (fun lexeme ->
          match lexeme with WhiteSpace -> false | _ -> true)
 
@@ -161,8 +218,9 @@ let parse (lst : kl_lex list) = parse_helper [] lst |> List.rev
 let program = "(begin (define r 10) (* pi (* r r)) '(\"asdf\"))"
 
 let main () =
-  if Array.length Sys.argv > 1 then read_string_from_file Sys.argv.(1) |> lex
-  else read_line () |> lex
+  (if Array.length Sys.argv > 1 then time read_string_from_file Sys.argv.(1)
+   else time read_line ())
+  |> time lex |> time parse
 
 (* |> parse |> eval |> eval_print *)
 (* let _ = main () *)
