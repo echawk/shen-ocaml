@@ -78,7 +78,6 @@ type kl_lex =
   | String of char list
   | Symbol of char list
   | WhiteSpace
-  | ERROR of char list
 
 let char_is_digit c = match c with '0' .. '9' -> true | _ -> false
 
@@ -107,7 +106,7 @@ let lex_number (hd : char) (tl : 'a SizedList.sized_list) : kl_lex =
       match tl.lst with
       | '0' .. '9' :: _ -> lex_number_helper hd tl
       | _ -> Symbol [ hd ])
-  | _ -> ERROR [ hd ]
+  | _ -> failwith "unreachable"
 
 let next_lexeme current_char (rest_of_chars : 'a SizedList.sized_list) : kl_lex
     =
