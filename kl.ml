@@ -154,11 +154,12 @@ let rec lex_helper acc (current_char : char)
       (SizedList.hd next_rest_of_chars)
       (SizedList.tl next_rest_of_chars)
 
-let lex str =
+let lex str : kl_lex SizedList.sized_list =
   let program_char_lst = char_list_of_string str |> SizedList.init in
   lex_helper [] (SizedList.hd program_char_lst) (SizedList.tl program_char_lst)
   |> List.filter (fun lexeme ->
          match lexeme with WhiteSpace -> false | _ -> true)
+  |> SizedList.init
 
 (* Parser code below: *)
 
@@ -171,47 +172,67 @@ type kl_value =
   | String of string
   | List of kl_value list
 
-(* FIXME: I don't think this definition is *technically* correct yet. *)
-type kl_expr = Value of kl_value | Expr of kl_expr
-
-let parse_number (lst : kl_lex list) : kl_value * kl_lex list =
-  match lst with
-  | Number lst :: rst ->
+let parse_number (lst : kl_lex SizedList.sized_list) :
+    kl_value * kl_lex SizedList.sized_list =
+  match lst.lst with
+  | Number l :: rst ->
       ( Number
-          (let lst_str = string_of_char_list lst in
-           if List.mem '.' lst then Float (float_of_string lst_str)
+          (let lst_str = string_of_char_list l in
+           if List.mem '.' l then Float (float_of_string lst_str)
            else Int (int_of_string lst_str)),
-        rst )
-  | _ -> (ERROR (List.hd lst), List.tl lst)
+        SizedList.tl lst )
+  | _ -> (ERROR (SizedList.hd lst), SizedList.tl lst)
 
-let parse_symbol (lst : kl_lex list) : kl_value * kl_lex list =
-  match lst with
-  | Symbol char_lst :: rst -> (Symbol (char_lst |> string_of_char_list), rst)
-  | _ -> (ERROR (List.hd lst), List.tl lst)
+let parse_symbol (lst : kl_lex SizedList.sized_list) :
+    kl_value * kl_lex SizedList.sized_list =
+  match lst.lst with
+  | Symbol char_lst :: rst ->
+      (Symbol (char_lst |> string_of_char_list), SizedList.tl lst)
+  | _ -> (ERROR (SizedList.hd lst), SizedList.tl lst)
 
-let parse_string (lst : kl_lex list) : kl_value * kl_lex list =
-  match lst with
-  | String char_lst :: rst -> (String (char_lst |> string_of_char_list), rst)
-  | _ -> (ERROR (List.hd lst), List.tl lst)
+let parse_string (lst : kl_lex SizedList.sized_list) :
+    kl_value * kl_lex SizedList.sized_list =
+  match lst.lst with
+  | String char_lst :: rst ->
+      (String (char_lst |> string_of_char_list), SizedList.tl lst)
+  | _ -> (ERROR (SizedList.hd lst), SizedList.tl lst)
 
-let parse_atom (lst : kl_lex list) : kl_value * kl_lex list =
-  match List.hd lst with
+let parse_atom (lst : kl_lex SizedList.sized_list) :
+    kl_value * kl_lex SizedList.sized_list =
+  match List.hd lst.lst with
   | String _ -> parse_string lst
   | Symbol _ -> parse_symbol lst
   | Number _ -> parse_number lst
-  | _ -> (ERROR (List.hd lst), List.tl lst)
+  | _ -> (ERROR (SizedList.hd lst), SizedList.tl lst)
 
-let rec parse_helper (acc : kl_value list) (lst : kl_lex list) : kl_value list =
-  let parse_result, rst =
-    match lst with
-    | String _ :: _ | Symbol _ :: _ | Number _ :: _ -> parse_atom lst
-    | _ -> (ERROR (List.hd lst), List.tl lst)
+(* let rec parse_list (lst : kl_lex SizedList.sized_list) : *)
+(*     kl_value * kl_lex SizedList.sized_list = *)
+(*   match lst.lst with *)
+(*   | LParen :: RParen :: rst -> (List [], SizedList.tl lst) *)
+(*   | LParen :: rst -> *)
+(*       let parsed_lst = parse (SizedList.tl lst) in *)
+(*       ( List parsed_lst.lst, *)
+(*         SizedList.drop (SizedList.length parsed_lst - 1) (SizedList.tl lst) ) *)
+(*   | _ -> (ERROR (SizedList.hd lst), SizedList.tl lst) *)
+
+(* https://bernsteinbear.com/blog/lisp/03_lists *)
+
+let parse (lst : kl_lex SizedList.sized_list) : kl_value SizedList.sized_list =
+  let rec parse_helper (acc : kl_value SizedList.sized_list)
+      (lst : kl_lex SizedList.sized_list) : kl_value SizedList.sized_list =
+    if SizedList.hd lst = RParen then acc
+    else
+      (* FIXME figure out how to break out when using RParen?*)
+      let parse_result, rst =
+        match lst.lst with
+        | String _ :: _ | Symbol _ :: _ | Number _ :: _ -> parse_atom lst
+        (* | LParen :: _ -> parse_list lst *)
+        | _ -> (ERROR (SizedList.hd lst), SizedList.tl lst)
+      in
+      let next_acc = SizedList.cons parse_result acc in
+      match rst.lst with [] -> next_acc | _ -> parse_helper next_acc rst
   in
-  let next_acc = parse_result :: acc in
-  match rst with [] -> next_acc | _ -> parse_helper next_acc rst
-
-let parse (lst : kl_lex list) = parse_helper [] lst |> List.rev
-
+  parse_helper (SizedList.init []) lst |> SizedList.rev
 
 (* FIXME: this is not yet correct Kλ. *)
 let program = "(begin (define r 10) (* pi (* r r)) '(\"asdf\"))"
